@@ -2,7 +2,7 @@ package Algorithm::QuasiNewton;
 
 use Mouse;
 use Math::MatrixReal;
-
+use Data::Dumper;
 our $EPS = 1e-10;
 
 has 'f' => (
@@ -20,7 +20,84 @@ has 'x' => (
     isa => 'Math::MatrixReal'
     );
 
+has 'mode' => (
+    is => 'rw',
+    isa => 'Str',
+    default => 'lbfgs'
+    );
+
 sub run {
+    my $self = shift;
+    if($self->{mode} eq 'bfgs'){
+	return $self->bfgs();
+    }
+    else {
+	return $self->lbfgs();
+    }
+}
+
+sub lbfgs {
+    my $self = shift;
+    
+    my $m = 100;
+    my $incr;
+    my $bound;
+    my ($rows, $columns) = $self->{x}->dim();
+    my $B = Math::MatrixReal->new_diag([map { 1;} @{ [1..$rows ] }]);
+    my $fx = $self->f->($self->{x});
+    my $g = $self->df->($self->{x});;
+    my $prev_g = $g;
+    my $prev_fx = $fx;
+    my $prev_x = $self->{x};
+
+    for(my $iter = 0; $iter <= 1000; $iter++){
+	if($iter <= $m){
+	    $incr = 0;
+	    $bound = $iter;
+	}
+	else{
+	    $incr = $iter - $m;
+	    $bound = $m;
+	}
+
+	my $q = $g;
+	my $alpha;
+	for(my $i = $bound - 1; $i >= 0; $i--){
+	    my $j = $i + $incr;
+	    my $y = $g - $prev_g;
+	    my $s = $self->{x} - $prev_x;
+	    my $ys = ~$y * $s;
+	    print STDERR $ys;
+	    my $rho = ~$ys;
+	    $alpha->{$bound} = ($rho * ~$s * $q)->element(1,1);
+	    print STDERR Dumper($alpha->{$bound});
+	    # print STDERR Dumper($q);
+	    # print STDERR Dumper($y);
+	    $q = $q - $alpha->{$bound} * $y;
+	}
+
+	my $r = $B * $q;
+	for(my $i = 0; $i < $bound; $i++){
+	    my $j = $i + $incr;
+	    my $y = $g - $prev_g;
+	    my $s = $self->{x} - $prev_x;
+	    my $ys = ~$y * $s;
+	    my $rho = ~$ys;
+	    my $beta = ($rho * ~$y * $r)->element(1,1);
+	    $r = $r + $s * ($alpha->{$i} - $beta);
+	}
+	my $gradient_direction = $r;
+	$prev_fx = $fx;
+	$self->{x} = $self->golden_section_search($gradient_direction);
+	
+	$fx = $self->f->($self->{x});
+
+	$prev_g = $g->clone();
+	$g = $self->df->($self->{x});
+    }
+}
+
+sub bfgs {
     my $self = shift;
     my ($rows, $columns) = $self->{x}->dim();
     my $B = Math::MatrixReal->new_diag([map { 1;} @{ [1..$rows ] }]);
