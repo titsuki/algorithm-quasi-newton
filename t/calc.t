@@ -24,7 +24,15 @@ my $df = sub {
 };
 
 my $init_param = Math::MatrixReal->new_from_cols([ [0,0,0] ]);
-my $newton = Algorithm::QuasiNewton->new(f => $f, df => $df, x => $init_param);
+my $newton = Algorithm::QuasiNewton->new(f => $f, df => $df, x => $init_param, mode => 'lbfgs');
+my $result = $newton->run();
+
+is(sprintf(".6f",$result->element(1,1)),sprintf(".6f",1.0));
+is(sprintf(".6f",$result->element(2,1)),sprintf(".6f",2.0));
+is(sprintf(".6f",$result->element(3,1)),sprintf(".6f",3.0));
+
+my $init_param = Math::MatrixReal->new_from_cols([ [0,0,0] ]);
+my $newton = Algorithm::QuasiNewton->new(f => $f, df => $df, x => $init_param, mode => 'bfgs');
 my $result = $newton->run();
 
 is(sprintf(".6f",$result->element(1,1)),sprintf(".6f",1.0));
