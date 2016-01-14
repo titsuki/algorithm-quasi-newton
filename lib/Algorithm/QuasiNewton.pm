@@ -2,7 +2,7 @@ package Algorithm::QuasiNewton;
 
 use Mouse;
 use Math::MatrixReal;
-use Data::Dumper;
+
 our $EPS = 1e-10;
 
 has 'f' => (
@@ -39,62 +39,52 @@ sub run {
 sub lbfgs {
     my $self = shift;
     
-    my $m = 100;
+    my $m = 10;
     my $incr;
     my $bound;
     my ($rows, $columns) = $self->{x}->dim();
     my $B = Math::MatrixReal->new_diag([map { 1;} @{ [1..$rows ] }]);
+    my $g = $self->df->($self->{x});
     my $fx = $self->f->($self->{x});
-    my $g = $self->df->($self->{x});;
-    my $prev_g = $g;
-    my $prev_fx = $fx;
-    my $prev_x = $self->{x};
 
-    for(my $iter = 0; $iter <= 1000; $iter++){
-	if($iter <= $m){
-	    $incr = 0;
-	    $bound = $iter;
-	}
-	else{
-	    $incr = $iter - $m;
-	    $bound = $m;
-	}
+    for(my $iter = 0; $iter <= 100; $iter++){
+	my $prev_fx = $fx;
+	my $prev_x = $self->{x};
+	my $prev_g = $g->clone();
 
-	my $q = $g;
-	my $alpha;
-	for(my $i = $bound - 1; $i >= 0; $i--){
-	    my $j = $i + $incr;
-	    my $y = $g - $prev_g;
-	    my $s = $self->{x} - $prev_x;
-	    my $ys = ~$y * $s;
-	    print STDERR $ys;
-	    my $rho = ~$ys;
-	    $alpha->{$bound} = ($rho * ~$s * $q)->element(1,1);
-	    print STDERR Dumper($alpha->{$bound});
-	    # print STDERR Dumper($q);
-	    # print STDERR Dumper($y);
-	    $q = $q - $alpha->{$bound} * $y;
-	}
-
-	my $r = $B * $q;
-	for(my $i = 0; $i < $bound; $i++){
-	    my $j = $i + $incr;
-	    my $y = $g - $prev_g;
-	    my $s = $self->{x} - $prev_x;
-	    my $ys = ~$y * $s;
-	    my $rho = ~$ys;
-	    my $beta = ($rho * ~$y * $r)->element(1,1);
-	    $r = $r + $s * ($alpha->{$i} - $beta);
-	}
-	my $gradient_direction = $r;
-	$prev_fx = $fx;
-	$self->{x} = $self->golden_section_search($gradient_direction);
-	
+	$g = $self->df->($self->{x});
 	$fx = $self->f->($self->{x});
 
-	$prev_g = $g->clone();
-	$g = $self->df->($self->{x});
+	$bound = ($iter - $m < 0 ? 0 : $iter - $m);
+	my $q = $g;
+
+	my $y = $g - $prev_g;
+	my $s = $self->{x} - $prev_x;
+	my $ys = ~$y * $s;
+
+	my $rho = 0;
+	if($ys->element(1,1) != 0){
+	    $rho = 1.0 / $ys->element(1,1);
+	}
+
+	my $alpha;
+	for(my $i = $iter - 1; $i >= $bound; $i--){
+	    $alpha->{$i} = $rho * (~$s * $q)->element(1,1);
+	    $q = $q - $y * $alpha->{$i};
+	}
+
+	my $r;
+
+	$r = $q;
+	for(my $i = $bound; $i < $iter; $i++){
+	    my $beta = $rho * (~$y * $r)->element(1,1);	    
+	    $r = $r + $s * ($alpha->{$i} - $beta);
+	}
+
+	my $gradient_direction = -$r;
+	$self->{x} = $self->golden_section_search($gradient_direction);
     }
+    return $self->{x};
 }
 
 sub bfgs {
