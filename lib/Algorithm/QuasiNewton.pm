@@ -40,8 +40,6 @@ sub lbfgs {
     my $self = shift;
     
     my $m = 10;
-    my $incr;
-    my $bound;
     my ($rows, $columns) = $self->{x}->dim();
     my $B = Math::MatrixReal->new_diag([map { 1;} @{ [1..$rows ] }]);
     my $g = $self->df->($self->{x});
@@ -59,7 +57,7 @@ sub lbfgs {
 	    last;
 	}
 
-	$bound = ($iter - $m < 0 ? 0 : $iter - $m);
+	my $bound = ($iter - $m < 0 ? 0 : $iter - $m);
 	my $q = $g;
 
 	my $y = $g - $prev_g;
