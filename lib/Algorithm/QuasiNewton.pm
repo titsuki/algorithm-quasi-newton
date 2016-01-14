@@ -47,13 +47,17 @@ sub lbfgs {
     my $g = $self->df->($self->{x});
     my $fx = $self->f->($self->{x});
 
-    for(my $iter = 0; $iter <= 100; $iter++){
+    for(my $iter = 0; $iter <= 1000; $iter++){
 	my $prev_fx = $fx;
 	my $prev_x = $self->{x};
 	my $prev_g = $g->clone();
 
 	$g = $self->df->($self->{x});
 	$fx = $self->f->($self->{x});
+
+	if(abs($fx - $prev_fx) <= $EPS){
+	    last;
+	}
 
 	$bound = ($iter - $m < 0 ? 0 : $iter - $m);
 	my $q = $g;
