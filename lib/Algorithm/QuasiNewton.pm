@@ -20,15 +20,27 @@ has 'x' => (
     isa => 'Math::MatrixReal'
     );
 
-has 'mode' => (
+has 'algorithm' => (
     is => 'rw',
     isa => 'Str',
     default => 'lbfgs'
     );
 
+has 'max_iteration' => (
+    is => 'ro',
+    isa => 'Int',
+    default => 1000
+    );
+
+has 'memory' => (
+    is => 'ro',
+    isa => 'Int',
+    default => 10
+    );
+
 sub run {
     my $self = shift;
-    if($self->{mode} eq 'bfgs'){
+    if($self->{algorithm} eq 'bfgs'){
 	return $self->bfgs();
     }
     else {
@@ -39,13 +51,12 @@ sub run {
 sub lbfgs {
     my $self = shift;
     
-    my $m = 10;
     my ($rows, $columns) = $self->{x}->dim();
     my $B = Math::MatrixReal->new_diag([map { 1;} @{ [1..$rows ] }]);
     my $g = $self->df->($self->{x});
     my $fx = $self->f->($self->{x});
 
-    for(my $iter = 0; $iter <= 1000; $iter++){
+    for(my $iter = 0; $iter <= $self->{max_iteration}; $iter++){
 	my $prev_fx = $fx;
 	my $prev_x = $self->{x};
 	my $prev_g = $g->clone();
@@ -57,7 +68,7 @@ sub lbfgs {
 	    last;
 	}
 
-	my $bound = ($iter - $m < 0 ? 0 : $iter - $m);
+	my $bound = ($iter - $self->{memory} < 0 ? 0 : $iter - $self->{memory});
 	my $q = $g;
 
 	my $y = $g - $prev_g;
