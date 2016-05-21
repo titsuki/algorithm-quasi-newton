@@ -150,15 +150,15 @@ sub golden_section_search {
     
     while($d - $c > $EPS){
 	if($fc > $fd){
-	    my $a = $c;
+	    $a = $c;
 	    $c = $d;
 	    $d = $b - $r * ($b - $a);
 	    $fc = $fd;
 	    $fd = $self->f->($p + $d * $gradient_direction);
 	} else {
-	    my $b = $d;
+	    $b = $d;
 	    $d = $c;
-	    $c = $a - $r * ($b - $a);
+	    $c = $a + $r * ($b - $a);
 	    $fd = $fc;
 	    $fc = $self->f->($p + $c * $gradient_direction);
 	}
